@@ -436,16 +436,20 @@ impl<'a> Interface<'a> {
     }
 
     fn select_with_emacs_key_scheme(&mut self, k: Key) -> bool {
+        // OK, I can see that settings are not available at compile time for the `match`.
+        // This is the best I can do for now.
+        if !self.settings.edit_key.is_none() && self.settings.edit_key.unwrap() == k {
+            return self.invoke_edit_action();
+        } else if !self.settings.delete_key.is_none() && self.settings.delete_key.unwrap() == k {
+            return self.invoke_delete_action();
+        }
+
         match k {
             Key::Char('\n') | Key::Char('\r') | Key::Ctrl('j') => {
-                self.run = true;
-                self.accept_selection();
-                return true;
+                return self.invoke_run_action();
             }
             Key::Char('\t') => {
-                self.run = false;
-                self.accept_selection();
-                return true;
+                return self.invoke_edit_action();
             }
             Key::Ctrl('c') | Key::Ctrl('g') | Key::Ctrl('z') | Key::Esc | Key::Ctrl('r') => {
                 self.run = false;
@@ -496,13 +500,7 @@ impl<'a> Interface<'a> {
                 self.refresh_matches();
             }
             Key::F(2) => {
-                if !self.matches.is_empty() {
-                    if self.settings.delete_without_confirm {
-                        self.delete_selection();
-                    } else {
-                        self.menu_mode = MenuMode::ConfirmDelete;
-                    }
-                }
+                self.invoke_delete_action();
             }
             _ => {}
         }
@@ -510,18 +508,37 @@ impl<'a> Interface<'a> {
         false
     }
 
+    fn invoke_delete_action(&mut self) -> bool {
+        if !self.matches.is_empty() {
+            if self.settings.delete_without_confirm {
+                self.delete_selection();
+            } else {
+                self.menu_mode = MenuMode::ConfirmDelete;
+            }
+        }
+        return false;
+    }
+
+    fn invoke_run_action(&mut self) -> bool {
+        self.run = true;
+        self.accept_selection();
+        return true;
+    }
+
+    fn invoke_edit_action(&mut self) -> bool {
+        self.run = false;
+        self.accept_selection();
+        return true;
+    }
+
     fn select_with_vim_key_scheme(&mut self, k: Key) -> bool {
         if self.in_vim_insert_mode {
             match k {
                 Key::Char('\n') | Key::Char('\r') | Key::Ctrl('j') => {
-                    self.run = true;
-                    self.accept_selection();
-                    return true;
+                    return self.invoke_run_action();
                 }
                 Key::Char('\t') => {
-                    self.run = false;
-                    self.accept_selection();
-                    return true;
+                    return self.invoke_edit_action();
                 }
                 Key::Ctrl('c') | Key::Ctrl('g') | Key::Ctrl('z') | Key::Ctrl('r') => {
                     self.run = false;
@@ -550,13 +567,7 @@ impl<'a> Interface<'a> {
                     self.refresh_matches();
                 }
                 Key::F(2) => {
-                    if !self.matches.is_empty() {
-                        if self.settings.delete_without_confirm {
-                            self.delete_selection();
-                        } else {
-                            self.menu_mode = MenuMode::ConfirmDelete;
-                        }
-                    }
+                    self.invoke_delete_action();
                 }
                 _ => {}
             }

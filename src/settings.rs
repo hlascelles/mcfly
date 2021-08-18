@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+use termion::event::Key;
 
 #[derive(Debug)]
 pub enum Mode {
@@ -86,6 +87,8 @@ pub struct Settings {
     pub delete_without_confirm: bool,
     pub interface_view: InterfaceView,
     pub result_sort: ResultSort,
+    pub edit_key: Option<Key>,
+    pub delete_key: Option<Key>,
 }
 
 impl Default for Settings {
@@ -114,6 +117,8 @@ impl Default for Settings {
             delete_without_confirm: false,
             interface_view: InterfaceView::Top,
             result_sort: ResultSort::Rank,
+            edit_key: None,
+            delete_key: None,
         }
     }
 }
@@ -406,6 +411,28 @@ impl Settings {
 
                 settings.fuzzy =
                     search_matches.is_present("fuzzy") || env::var("MCFLY_FUZZY").is_ok();
+
+                if let Ok(results) = env::var("MCFLY_EDIT_KEY") {
+                    // Is there a universal way to ask termion to convert a string like "D", "ENTER"
+                    // "TAB" etc into the "right Key"?
+                    if results.eq("ENTER") {
+                        settings.edit_key = Option::from(Key::Char('\n'));
+                    } else {
+                        settings.edit_key =
+                            Option::from(Key::Char(results.chars().next().unwrap()));
+                    }
+                }
+
+                if let Ok(results) = env::var("MCFLY_DELETE_KEY") {
+                    // Is there a universal way to ask termion to convert a string like "D", "ENTER"
+                    // "TAB" etc into the "right Key"?
+                    if results.eq("DELETE") {
+                        settings.delete_key = Option::from(Key::Delete);
+                    } else {
+                        settings.delete_key =
+                            Option::from(Key::Char(results.chars().next().unwrap()));
+                    }
+                }
 
                 settings.delete_without_confirm = search_matches
                     .is_present("delete_without_confirm")
