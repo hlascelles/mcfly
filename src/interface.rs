@@ -506,8 +506,6 @@ impl<'a> Interface<'a> {
     }
 
     fn try_custom_key_match(&mut self, k: Key) -> Option<bool> {
-        // OK, I can see that settings are not available at compile time for the `match`.
-        // This is the best I can do for now.
         if !self.settings.edit_key.is_none() && self.settings.edit_key.unwrap() == k {
             return Some(self.invoke_edit_action());
         } else if !self.settings.delete_key.is_none() && self.settings.delete_key.unwrap() == k {
@@ -541,6 +539,11 @@ impl<'a> Interface<'a> {
     }
 
     fn select_with_vim_key_scheme(&mut self, k: Key) -> bool {
+        let custom_result = self.try_custom_key_match(k);
+        if !custom_result.is_none() {
+            return custom_result.unwrap();
+        }
+
         if self.in_vim_insert_mode {
             match k {
                 Key::Char('\n') | Key::Char('\r') | Key::Ctrl('j') => {
