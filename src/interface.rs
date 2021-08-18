@@ -436,12 +436,9 @@ impl<'a> Interface<'a> {
     }
 
     fn select_with_emacs_key_scheme(&mut self, k: Key) -> bool {
-        // OK, I can see that settings are not available at compile time for the `match`.
-        // This is the best I can do for now.
-        if !self.settings.edit_key.is_none() && self.settings.edit_key.unwrap() == k {
-            return self.invoke_edit_action();
-        } else if !self.settings.delete_key.is_none() && self.settings.delete_key.unwrap() == k {
-            return self.invoke_delete_action();
+        let custom_result = self.try_custom_key_match(k);
+        if !custom_result.is_none() {
+            return custom_result.unwrap();
         }
 
         match k {
@@ -506,6 +503,18 @@ impl<'a> Interface<'a> {
         }
 
         false
+    }
+
+    fn try_custom_key_match(&mut self, k: Key) -> Option<bool> {
+        // OK, I can see that settings are not available at compile time for the `match`.
+        // This is the best I can do for now.
+        if !self.settings.edit_key.is_none() && self.settings.edit_key.unwrap() == k {
+            return Some(self.invoke_edit_action());
+        } else if !self.settings.delete_key.is_none() && self.settings.delete_key.unwrap() == k {
+            return Some(self.invoke_delete_action());
+        }
+
+        return None;
     }
 
     fn invoke_delete_action(&mut self) -> bool {
